@@ -6,6 +6,7 @@ from langchain.embeddings import OpenAIEmbeddings
 from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
 from langchain.retrievers.multi_query import MultiQueryRetriever
+from langchain.chains import RetrievalQA
 
 
 # Loader
@@ -31,12 +32,9 @@ embeddings_model = OpenAIEmbeddings()
 db = Chroma.from_documents(texts, embeddings_model)
 
 # Question
-question = "What are the approaches to Task Decomposition?"
+question = "무엇을 위한 사업이며, 사업에 선정되기 위해선 어떻게 해야 하나요?"
 llm = ChatOpenAI(temperature=0)
-retriever_from_llm = MultiQueryRetriever.from_llm(
-    retriever=db.as_retriever(), llm=llm
-)
+qa_chain = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+answer = qa_chain({"query": question})
 
-
-
-# When an error occurs : pip install tiktoken..
+print(answer)
