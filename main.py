@@ -7,34 +7,55 @@ from langchain.vectorstores import Chroma
 from langchain.chat_models import ChatOpenAI
 from langchain.retrievers.multi_query import MultiQueryRetriever
 from langchain.chains import RetrievalQA
+import streamlit as st
+import tempfile
+import os
 
+# Title
+st.title("Chat PDF")
+st.write("---")
 
-# Loader
-loader = PyPDFLoader("youth_support.pdf")
-pages = loader.load_and_split()
+# Upload File
+uploaded_file = st.file_uploader("Choose a file")
+st.write("---")
 
+def pdf_to_document(uploaded_file):
+    temp_dir = tempfile.TemporaryDirectory()
+    temp_filepath = os.path.join(temp_dir.name, uploaded_file.name)
+    with open(temp_filepath, "wb") as f:
+        f.write(uploaded_file.getvalue())
+    loader = PyPDFLoader(temp_filepath)
+    pages = loader.load_and_split()
+    return pages
 
-# Split
-text_splitter = RecursiveCharacterTextSplitter(
-    # Set a really small chunk size, just to show.
-    chunk_size = 100,
-    chunk_overlap  = 20,
-    length_function = len,
-    is_separator_regex = False,
-)
+# If Uploaded
+if uploaded_file is not None:
+  pages = pdf_to_document(uploaded_file)
 
-texts = text_splitter.split_documents(pages)
+  # Split
+  text_splitter = RecursiveCharacterTextSplitter(
+      # Set a really small chunk size, just to show.
+      chunk_size = 100,
+      chunk_overlap  = 20,
+      length_function = len,
+      is_separator_regex = False,
+  )
 
-# Embedding
-embeddings_model = OpenAIEmbeddings()
+  texts = text_splitter.split_documents(pages)
 
-# Load it into Chroma
-db = Chroma.from_documents(texts, embeddings_model)
+  # Embedding
+  embeddings_model = OpenAIEmbeddings()
 
-# Question
-question = "무엇을 위한 사업이며, 사업에 선정되기 위해선 어떻게 해야 하나요?"
-llm = ChatOpenAI(temperature=0)
-qa_chain = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
-answer = qa_chain({"query": question})
+  # Load it into Chroma
+  db = Chroma.from_documents(texts, embeddings_model)
 
-print(answer)
+  # Question
+  st.header("Chat with your PDF now!!")
+  question = st.text_input('Question', 'input your prompt')
+
+  if st.button('Generate'):
+      with st.spinner('Loading...'):
+        llm = ChatOpenAI(temperature=0)
+        qa_chain = RetrievalQA.from_chain_type(llm, retriever=db.as_retriever())
+        answer = qa_chain({"query": question})
+        st.write(answer["result"])
