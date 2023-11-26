@@ -1,9 +1,9 @@
-# from dotenv import load_dotenv
-# load_dotenv()
+from dotenv import load_dotenv
+load_dotenv()
 
-__import__('pysqlite3')
-import sys
-sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
+# __import__('pysqlite3')
+# import sys
+# sys.modules['sqlite3'] = sys.modules.pop('pysqlite3')
 
 from langchain.document_loaders import PyPDFLoader
 from langchain.text_splitter import RecursiveCharacterTextSplitter
@@ -33,9 +33,10 @@ def pdf_to_document(uploaded_file):
     temp_dir = tempfile.TemporaryDirectory()
     temp_filepath = os.path.join(temp_dir.name, uploaded_file.name)
     with open(temp_filepath, "wb") as f:
-        f.write(uploaded_file.getvalue())
+        f.write(uploaded_file.read())
     loader = PyPDFLoader(temp_filepath)
     pages = loader.load_and_split()
+    temp_dir.cleanup() #TemporaryDirectory 삭제
     return pages
 
 # Prompt
@@ -49,8 +50,8 @@ if uploaded_file is not None:
   # Split
   text_splitter = RecursiveCharacterTextSplitter(
       # Set a really small chunk size, just to show.
-      chunk_size = 200,
-      chunk_overlap  = 10,
+      chunk_size = 500,
+      chunk_overlap  = 50,
       length_function = len,
       is_separator_regex = False,
   )
@@ -70,7 +71,7 @@ if uploaded_file is not None:
          self.container = container
          self.text = initial_texts
 
-      def on_llm_new_token(self, token: str, **kwargs: Any) -> None:
+      def on_llm_new_token(self, token: str, **kwargs) -> None:
          self.text+=token
          self.container.markdown(self.text)
 
